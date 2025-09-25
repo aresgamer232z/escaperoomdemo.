@@ -1,291 +1,456 @@
-<!DOCTYPE html><html lang="es"><head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Saxon Possessive — Escape (Top-Down)</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Escape Room – Saxon Possessive</title>
 <style>
-:root{--bg:#0b1220;--card:#0f172a;--ink:#e5e7eb;--muted:#9aa3b6;--line:#22314a;--accent:#06b6d4;--ok:#22c55e;--bad:#ef4444}
-*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--ink);font-family:'Inter',system-ui}
-.container{max-width:1100px;margin:0 auto;padding:14px;display:grid;grid-template-columns:1fr 320px;gap:14px}
-@media(max-width:900px){.container{grid-template-columns:1fr}}
-.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;box-shadow:0 8px 30px rgba(0,0,0,.25)}
-h1{font-size:22px;margin:0 0 6px}.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.tag{font-size:13px;border:1px solid var(--line);padding:6px 10px;border-radius:999px;color:var(--muted);background:#0b1426}
-.btn{border:0;background:var(--accent);color:#021014;font-weight:800;border-radius:10px;padding:10px 12px;cursor:pointer}
-.btn.ghost{background:#161f33;color:var(--ink);border:1px solid var(--line)}
-.input,select{width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);background:#0b1426;color:var(--ink)}
-.small{font-size:12px;color:var(--muted)}canvas{background:#0f172a;border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.25)}
-.modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;padding:16px;z-index:50}
-.modal .card{max-width:560px;width:96%}
-.hudMsg{position:absolute;left:50%;transform:translateX(-50%);bottom:10px;background:rgba(0,0,0,.45);padding:6px 10px;border-radius:8px;font-size:12px}
-.mobile{position:fixed;left:0;right:0;bottom:0;display:none;justify-content:space-between;align-items:center;padding:8px 10px;gap:12px;pointer-events:none;z-index:40}
-.pad{pointer-events:auto;display:grid;grid-template-columns:60px 60px 60px;grid-template-rows:60px 60px 60px;gap:4px}
-.pad button{width:60px;height:60px;border-radius:10px;border:1px solid var(--line);background:#141e33;color:#e5e7eb;font-weight:900;font-size:20px}
-.padAct{pointer-events:auto;width:90px;height:90px;border-radius:50%;border:1px solid var(--line);background:#06b6d4;color:#031216;font-size:28px;font-weight:900}
+  :root{
+    --bg:#0e0f12; --card:#171a21; --tile:#2a2f3a; --wall:#3a4250; --accent:#6ee7ff;
+    --ok:#2ecc71; --bad:#e74c3c; --text:#e9eef6;
+  }
+  *{box-sizing:border-box} body{margin:0;background:linear-gradient(180deg,#0c0d12,#131621);
+  color:var(--text);font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif}
+  header{padding:14px 18px;border-bottom:1px solid #242938;display:flex;gap:10px;align-items:center;justify-content:space-between}
+  h1{font-size:18px;margin:0;font-weight:700;letter-spacing:.2px}
+  main{max-width:980px;margin:18px auto;padding:0 12px}
+  .row{display:grid;grid-template-columns:1fr 340px;gap:14px}
+  @media (max-width:900px){.row{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid #222736;border-radius:16px;box-shadow:0 8px 24px #0006}
+  .panel{padding:14px}
+  /* HUD */
+  .hud{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .badge{background:#1f2430;border:1px solid #2a3140;padding:6px 10px;border-radius:999px;font-size:13px}
+  .badge b{color:var(--accent)}
+  button{background:#222a38;color:var(--text);border:1px solid #2b3342;border-radius:12px;padding:10px 14px;font-weight:600;cursor:pointer}
+  button:hover{filter:brightness(1.1)}
+  .accent{border-color:#2dd4bf}
+  /* Grid (mapa) */
+  #board{aspect-ratio:1/1;background:#0b0d12;border-radius:16px;margin:10px;display:grid;gap:2px;padding:8px;border:1px solid #1f2531}
+  .cell{background:var(--tile);border-radius:6px;position:relative;transition:transform .05s}
+  .wall{background:var(--wall)}
+  .goal::after{content:"⬇ Puerta";position:absolute;inset:auto 6px 6px auto;font-size:12px;opacity:.8}
+  .player{background:#222;border:2px solid #4ade80;box-shadow:0 0 0 3px #4ade8033 inset;border-radius:8px}
+  .hint{outline:2px dashed #ffd166aa}
+  /* Modal pregunta */
+  dialog{border:none;border-radius:16px;background:#0f1320;color:var(--text);width:min(560px,92%);padding:0}
+  dialog::backdrop{background:#000a}
+  .q-header{padding:14px 16px;border-bottom:1px solid #1f2533;display:flex;gap:10px;align-items:center}
+  .q-body{padding:16px;display:grid;gap:10px}
+  .q-hint{font-size:13px;opacity:.9}
+  .opt{background:#1a2030;padding:10px;border:1px solid #283044;border-radius:10px;cursor:pointer}
+  .opt:hover{filter:brightness(1.05)}
+  .ok{border-color:#2ecc71;background:#193123}
+  .bad{border-color:#e74c3c;background:#2c1619}
+  /* Touch controls */
+  .pad{display:grid;grid-template-columns:repeat(3,56px);gap:8px;justify-content:center;padding:12px}
+  .pad button{width:56px;height:56px;border-radius:14px}
+  .ghost{visibility:hidden}
+  /* Start / End */
+  .center{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:22px;gap:14px;text-align:center}
+  input[type=text]{width:100%;padding:12px 14px;border-radius:12px;border:1px solid #2a3140;background:#161b25;color:var(--text)}
+  .small{font-size:12px;opacity:.8}
 </style>
-</head><body>
-<div class="container">
-  <div class="card" style="position:relative">
-    <h1>Saxon Possessive — Escape</h1>
-    <div class="row">
-      <span class="tag">Jugador: <b id="pName">—</b></span>
-      <span class="tag">Nivel: <b id="lvl">1</b>/3</span>
-      <span class="tag">Candados: <b id="locks">0</b>/<b id="locksT">0</b></span>
-      <span class="tag">Aciertos: <b id="ok">0</b></span>
-      <span class="tag">Errores: <b id="bad">0</b></span>
-      <span class="tag">Puntos: <b id="pts">0</b></span>
+</head>
+<body>
+<header>
+  <h1>Escape Room · Saxon Possessive</h1>
+  <div class="hud">
+    <span class="badge">Jugador: <b id="hudName">—</b></span>
+    <span class="badge">Nivel: <b id="hudLevel">1/5</b></span>
+    <span class="badge">Tiempo: <b id="hudTime">05:00</b></span>
+    <span class="badge">Puntos: <b id="hudScore">0</b></span>
+  </div>
+</header>
+
+<main class="row">
+  <!-- Juego -->
+  <section class="card">
+    <div class="panel">
+      <div id="board" aria-label="tablero"></div>
+      <div class="pad">
+        <span class="ghost"></span>
+        <button id="btnUp">↑</button>
+        <span class="ghost"></span>
+        <button id="btnLeft">←</button>
+        <button id="btnDown">↓</button>
+        <button id="btnRight">→</button>
+      </div>
     </div>
-    <div class="row" style="margin:8px 0">
-      <button class="btn" id="restart">Reiniciar</button>
-      <button class="btn ghost" id="hint">💡 Pistas</button>
-      <button class="btn" id="next">Siguiente nivel ⟶</button>
-      <button class="btn" id="finish">✅ Terminar</button>
+  </section>
+
+  <!-- Instrucciones / Estado -->
+  <aside class="card">
+    <div class="panel">
+      <div id="screen"></div>
     </div>
-    <canvas id="game" width="768" height="512"></canvas>
-    <div id="hudMsg" class="hudMsg" style="display:none"></div>
+  </aside>
+</main>
+
+<!-- Modal de preguntas -->
+<dialog id="quiz">
+  <div class="q-header">
+    <strong>Desbloquea la puerta</strong>
   </div>
-
-  <div class="card">
-    <h2 style="margin:0 0 8px">Registro</h2>
-    <label class="small">Nombre *</label>
-    <input class="input" id="iName" placeholder="Tu nombre">
-    <label class="small">Correo (opcional)</label>
-    <input class="input" id="iMail" placeholder="tucorreo@clase.com">
-    <label class="small">Curso/Grupo (opcional)</label>
-    <input class="input" id="iGroup" placeholder="10B">
-    <div style="height:8px"></div>
-    <button class="btn" id="reg">Registrarme</button>
-    <p class="small" id="regMsg"></p>
-
-    <h2 style="margin:12px 0 8px">Modo</h2>
-    <select id="mode" class="input">
-      <option value="practica">Práctica</option>
-      <option value="evaluacion">Evaluación</option>
-    </select>
-    <p class="small">Pistas *no* quitan puntos. Puntos: <b>+10</b> correcta, <b>−1</b> incorrecta.</p>
+  <div class="q-body">
+    <div id="qText"></div>
+    <div id="qHint" class="q-hint"></div>
+    <div id="qOpts"></div>
   </div>
-</div>
-
-<!-- modal pregunta -->
-<div class="modal" id="qModal"><div class="card">
-  <h2 id="qTitle">Convierte…</h2>
-  <input id="qInput" class="input" placeholder="ej: Mary's book">
-  <div style="height:8px"></div>
-  <div class="row"><button class="btn" id="qOk">Validar</button><button class="btn ghost" id="qCancel">Cancelar</button></div>
-  <p class="small" id="qFeedback"></p>
-</div></div>
-
-<!-- modal pistas -->
-<div class="modal" id="hModal"><div class="card">
-  <h2>Pistas del nivel <span id="hLvl">1</span></h2>
-  <div id="hBody" class="small"></div>
-  <div style="height:8px"></div>
-  <button class="btn" id="hClose">Cerrar</button>
-</div></div>
-
-<!-- modal fin -->
-<div class="modal" id="fModal"><div class="card">
-  <h2>Resultados</h2>
-  <div id="fBody" class="small"></div>
-  <div style="height:8px"></div>
-  <button class="btn" id="fClose">Cerrar</button>
-</div></div>
-
-<!-- D-pad móvil -->
-<div class="mobile" id="mob">
-  <div class="pad">
-    <div></div><button id="up">▲</button><div></div>
-    <button id="left">◀</button><div></div><button id="right">▶</button>
-    <div></div><button id="down">▼</button><div></div>
-  </div>
-  <button class="padAct" id="act">E</button>
-</div>
+</dialog>
 
 <script>
-/* ===== Config general ===== */
-const GAS_ENDPOINT = ""; // pega tu Apps Script si quieres guardar resultados
+/* ======= Configuración del juego ======= */
+const LEVELS = [
+  { // Nivel 1 – 5:00, -5s penalización
+    time: 300, penalty: 5,
+    map: [
+      "##########",
+      "#P......G#",
+      "#..##....#",
+      "#..##....#",
+      "#........#",
+      "#..##....#",
+      "#..##....#",
+      "#....H...#",
+      "##########",
+      "##########",
+    ],
+    q:{
+      text:"Elige el *genitivo sajón* correcto: the backpack of Maria",
+      opts:["Maria's backpack","Marias' backpack","Maria backpack"],
+      ok:0, hint:"Regla base: nombre singular + 's → posesión."
+    }
+  },
+  { // Nivel 2 – 4:00, -4s
+    time: 240, penalty: 4,
+    map: [
+      "##########",
+      "#P...##..#",
+      "#....##..#",
+      "#..H.....#",
+      "#..##....#",
+      "#..##G...#",
+      "#........#",
+      "#........#",
+      "##########",
+      "##########",
+    ],
+    q:{
+      text:"Plural terminado en *s*: the toys of the kids",
+      opts:["the kids' toys","the kid's toys","the kids's toys"],
+      ok:0, hint:"Si el plural ya termina en s → solo apóstrofo al final."
+    }
+  },
+  { // Nivel 3 – 3:00, -3s
+    time: 180, penalty: 3,
+    map: [
+      "##########",
+      "#P.......#",
+      "#.####...#",
+      "#....#...#",
+      "#.H..#...#",
+      "#.##.#...#",
+      "#....#G..#",
+      "#....#...#",
+      "##########",
+      "##########",
+    ],
+    q:{
+      text:"Plural irregular: the feet of the men",
+      opts:["the men's feet","the mens' feet","the men feet"],
+      ok:0, hint:"Plurales irregulares (men, children, people) → + 's."
+    }
+  },
+  { // Nivel 4 – 2:00, -2s
+    time: 120, penalty: 2,
+    map: [
+      "##########",
+      "#P....#..#",
+      "#.##..#..#",
+      "#.##..#..#",
+      "#.H...#..#",
+      "#.####...#",
+      "#.....G..#",
+      "#........#",
+      "##########",
+      "##########",
+    ],
+    q:{
+      text:"Nombres que terminan en *s*: the car of James",
+      opts:["James's car","James' car","Jame's car"],
+      ok:0, hint:"En inglés moderno se acepta *'s* para propios en -s."
+    }
+  },
+  { // Nivel 5 – 1:00, -1s
+    time: 60, penalty: 1,
+    map: [
+      "##########",
+      "#P..##...#",
+      "#...##...#",
+      "#.H......#",
+      "#.#####..#",
+      "#.....#..#",
+      "#..##.#G.#",
+      "#.....#..#",
+      "##########",
+      "##########",
+    ],
+    q:{
+      text:"Pregunta de *whose*: Completa Whose book is this? It is __. (my sister)_",
+      opts:["my sister's","my sisters'","the book of my sister"],
+      ok:0, hint:"Con *whose* la respuesta se da con *'s* del poseedor."
+    }
+  },
+];
 
-// Banco: MUY SUAVE (fáciles → medios). Pistas sin castigo.
-const DATA = {
-  1: [
-    {q:"the book of Anna", a:["anna's book"], hint:"Singular: añade 's al poseedor."},
-    {q:"the cat of Mary", a:["mary's cat"], hint:"Nombre propio + 's."},
-    {q:"the pen of the teacher", a:["the teacher's pen","teacher's pen"], hint:"Con/ sin 'the' al inicio."}
-  ],
-  2: [
-    {q:"the toys of the children", a:["children's toys","the children's toys"], hint:"Plural irregular → 's (children's)."},
-    {q:"the schedule of the teachers", a:["teachers' schedule","the teachers' schedule"], hint:"Plural en -s → solo apóstrofo (teachers')."},
-    {q:"the shoes of the women", a:["women's shoes","the women's shoes"], hint:"Plural irregular → 's (women's)."}
-  ],
-  3: [
-    {q:"the anniversary of James", a:["james's anniversary","james' anniversary"], hint:"En -s valen James's / James'."},
-    {q:"the tail of the dog of Ana", a:["ana's dog's tail"], hint:"Posesivo en cadena: Ana's dog's tail."},
-    {q:"the rules of the game in class", a:["the game's rules in class","game's rules in class"], hint:"Con sustantivo común, 's es válido (game's)."}
-  ]
+const TILE_WALL = '#', TILE_EMPTY='.', TILE_PLAYER='P', TILE_GOAL='G', TILE_HINT='H';
+
+/* ======= Estado ======= */
+let player={x:1,y:1};
+let levelIndex=0;
+let score=0;
+let timer=null, timeLeft=LEVELS[0].time;
+let startedAt=null, finishedAt=null;
+let playerName = localStorage.getItem('sp_name') || '';
+
+/* ======= UI ======= */
+const board = document.getElementById('board');
+const screen = document.getElementById('screen');
+const hud = {
+  name: document.getElementById('hudName'),
+  level: document.getElementById('hudLevel'),
+  time: document.getElementById('hudTime'),
+  score: document.getElementById('hudScore')
 };
-const PTS_OK=10, PTS_BAD=-1;
+const quiz = document.getElementById('quiz');
+const qText = document.getElementById('qText');
+const qHint = document.getElementById('qHint');
+const qOpts = document.getElementById('qOpts');
 
-/* ===== Estado ===== */
-let player={x:80,y:80,s:2.2}, keys={}, msgTm=null;
-let level=1, locksOpened=0, locksTotal=0;
-let stats={name:"—", mail:"", group:"", ok:0, bad:0, pts:0, mode:"practica"};
-let answers={}; // lvl -> [{q, user, ok}]
-const el=id=>document.getElementById(id);
-
-/* ===== Registro ===== */
-el('reg').onclick = async ()=>{
-  const n=el('iName').value.trim(); if(!n){el('regMsg').textContent="Escribe tu nombre.";return;}
-  stats.name=n; stats.mail=el('iMail').value.trim(); stats.group=el('iGroup').value.trim();
-  el('pName').textContent=stats.name; el('regMsg').textContent="Registrado ✔";
-  if(GAS_ENDPOINT) try{await fetch(GAS_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'register',alumno:{nombre:n,correo:stats.mail,grupo:stats.group}})})}catch(e){}
+/* ======= Util ======= */
+const fmt = s=> {
+  const m = Math.floor(s/60).toString().padStart(2,'0');
+  const ss = Math.floor(s%60).toString().padStart(2,'0');
+  return ${m}:${ss};
 };
-el('mode').onchange=e=>stats.mode=e.target.value;
+function clamp(v,min,max){return Math.max(min,Math.min(max,v));}
 
-/* ===== HUD ===== */
-function hud(){el('lvl').textContent=level; el('locks').textContent=locksOpened; el('locksT').textContent=locksTotal; el('ok').textContent=stats.ok; el('bad').textContent=stats.bad; el('pts').textContent=stats.pts;}
-function toast(t){const m=el('hudMsg'); m.textContent=t; m.style.display='block'; clearTimeout(msgTm); msgTm=setTimeout(()=>m.style.display='none',1300);}
-
-/* ===== Mundo (1 sala por nivel) ===== */
-const TILE=32, W=24, H=16, cv=el('game'), ctx=cv.getContext('2d');
-const T={WALL:1, FLOOR:0, DOOR:2, HINT:3, NPC:4, EXIT:5, LOCK:6};
-let room=null, lockMap=null;
-
-function mkRoom(){
-  const g=Array.from({length:H},(,y)=>Array.from({length:W},(,x)=> (y===0||y===H-1||x===0||x===W-1)?T.WALL:T.FLOOR));
-  const doors=[[W-3,4],[5,H-4],[Math.floor(W/2)+2, H-5]];
-  const hints=[[4,4],[W-6,6]];
-  const npc=[Math.floor(W/2)-1,5];
-  const exit=[W-3,H-3];
-  doors.slice(0,3).forEach(([x,y])=>g[y][x]=T.LOCK);
-  hints.forEach(([x,y])=>g[y][x]=T.HINT);
-  g[npc[1]][npc[0]]=T.NPC; g[exit[1]][exit[0]]=T.EXIT;
-  return {g,doors:doors.slice(0,3),hints,exit,npc};
+/* ======= Inicio / Pantallas ======= */
+function renderStart(){
+  board.innerHTML='';
+  const box = document.createElement('div');
+  box.className='center';
+  box.innerHTML=`
+    <h2>Bienvenido/a</h2>
+    <p>Muévete con <b>WASD / Flechas</b> o los botones. Llega a la <b>puerta</b> y responde
+    la pregunta para abrirla. Toca los <b>cuadros punteados</b> para ver <b>pistas</b>.</p>
+    <input id="nameInput" type="text" placeholder="Escribe tu nombre" value="${playerName}"/>
+    <button class="accent" id="startBtn">Comenzar</button>
+    <p class="small">Niveles: 1) 5:00 · 2) 4:00 · 3) 3:00 · 4) 2:00 · 5) 1:00</p>
+  `;
+  screen.innerHTML='';
+  screen.appendChild(box);
+  document.getElementById('startBtn').onclick=()=>{
+    const v = document.getElementById('nameInput').value.trim() || 'Jugador';
+    playerName = v; localStorage.setItem('sp_name', v);
+    startGame();
+  };
+  hud.name.textContent = playerName || '—';
 }
-function setupLevel(){
-  room=mkRoom(); locksOpened=0; locksTotal = level===1?2:3;
-  // asignar retos
-  lockMap={}; const idxs=[...Array(DATA[level].length).keys()].sort(()=>Math.random()-0.5);
-  room.doors.slice(0,locksTotal).forEach((pos,i)=>{ lockMap[pos.join(',')]={open:false, idx:idxs[i%DATA[level].length]}; });
-  player.x=80; player.y=80; hud();
+function renderEnd(){
+  clearInterval(timer);
+  const totalElapsed = Math.max(0, Math.round((finishedAt - startedAt)/1000));
+  const box = document.createElement('div');
+  box.className='center';
+  box.innerHTML = `
+    <h2>¡Escape completado!</h2>
+    <p><b>${playerName}</b>, tu puntaje fue <b>${score}</b> y tu tiempo total <b>${fmt(totalElapsed)}</b>.</p>
+    <button id="againBtn">Jugar de nuevo</button>
+    <p class="small">Tip: usa este resultado para dar puntos extra a quienes terminen primero 😉</p>
+  `;
+  screen.innerHTML=''; screen.appendChild(box);
+  document.getElementById('againBtn').onclick=()=>{ levelIndex=0; score=0; renderStart(); };
 }
 
-/* ===== Dibujo ===== */
-function draw(){
-  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
-    const t=room.g[y][x], rx=x*TILE, ry=y*TILE;
-    if(t===T.WALL){ctx.fillStyle='#141c31';ctx.fillRect(rx,ry,TILE,TILE);}
-    else{ctx.fillStyle='#1a2340';ctx.fillRect(rx,ry,TILE,TILE); if(((x*13+y*7)%7)===0){ctx.fillStyle='#0e1530';ctx.fillRect(rx+12,ry+12,3,3);} }
+/* ======= Motor ======= */
+let currentMap=[], rows=0, cols=0;
+
+function loadLevel(idx){
+  const L = LEVELS[idx];
+  currentMap = L.map.map(r=>r.split(''));
+  rows=currentMap.length; cols=currentMap[0].length;
+
+  // tamaño de la grilla responsivo
+  const side = Math.min(720, Math.min(window.innerWidth-40, 720));
+  board.style.gridTemplateColumns = repeat(${cols}, 1fr);
+  board.innerHTML='';
+
+  // localizar jugador
+  for(let y=0;y<rows;y++){
+    for(let x=0;x<cols;x++){
+      if(currentMap[y][x]==TILE_PLAYER){ player.x=x; player.y=y; }
+    }
   }
-  // objetos
-  room.doors.slice(0,locksTotal).forEach(([x,y])=>{
-    const k=${x},${y}, open=lockMap[k]?.open; ctx.fillStyle=open?'#22c55e':'#6b4f1d'; ctx.fillRect(x*TILE+6,y*TILE+6,TILE-12,TILE-12);
-    ctx.fillStyle=open?'#0f172a':'#eab308'; ctx.fillRect(x*TILE+TILE/2-4,y*TILE+TILE/2-3,8,6);
+
+  // pintar
+  for(let y=0;y<rows;y++){
+    for(let x=0;x<cols;x++){
+      const c = document.createElement('div');
+      c.className='cell';
+      const t = currentMap[y][x];
+      if(t==TILE_WALL) c.classList.add('wall');
+      if(t==TILE_GOAL) c.classList.add('goal');
+      if(t==TILE_HINT) c.classList.add('hint');
+      if(x==player.x&&y==player.y) c.classList.add('player');
+      c.dataset.x=x; c.dataset.y=y;
+      c.onclick = ()=>touchTile(x,y);
+      board.appendChild(c);
+    }
+  }
+
+  // HUD
+  hud.level.textContent = ${idx+1}/${LEVELS.length};
+  timeLeft = L.time;
+  hud.time.textContent = fmt(timeLeft);
+  hud.score.textContent = score;
+
+  // panel lateral
+  const help = document.createElement('div');
+  help.innerHTML = `
+    <h3>Nivel ${idx+1}</h3>
+    <ul>
+      <li>Tiempo: <b>${fmt(L.time)}</b> | Penalización por error: <b>-${L.penalty}s</b></li>
+      <li>Llega a la puerta y responde correctamente.</li>
+      <li>Presiona una <b>celda punteada</b> para ver la pista.</li>
+    </ul>
+  `;
+  screen.innerHTML=''; screen.appendChild(help);
+}
+
+function startTimer(){
+  clearInterval(timer);
+  startedAt = startedAt ?? Date.now();
+  timer = setInterval(()=>{
+    timeLeft--; hud.time.textContent = fmt(timeLeft);
+    if(timeLeft<=0){ clearInterval(timer); gameOver(); }
+  }, 1000);
+}
+
+function startGame(){
+  finishedAt=null; startedAt=null;
+  score=0; levelIndex=0;
+  loadLevel(levelIndex);
+  startTimer();
+  // foco para teclado en móviles no importa
+}
+
+function gameOver(){
+  // pantalla de derrota
+  const box = document.createElement('div');
+  box.className='center';
+  box.innerHTML=`
+    <h2>Se acabó el tiempo</h2>
+    <p>${playerName}, tu puntaje fue <b>${score}</b>. ¡Inténtalo otra vez!</p>
+    <button class="accent" id="retryBtn">Reintentar</button>
+  `;
+  screen.innerHTML=''; screen.appendChild(box);
+  document.getElementById('retryBtn').onclick=()=>{ renderStart(); };
+}
+
+/* ======= Movimiento ======= */
+function canMove(nx,ny){
+  nx=clamp(nx,0,cols-1); ny=clamp(ny,0,rows-1);
+  return currentMap[ny][nx]!==TILE_WALL;
+}
+function move(dx,dy){
+  const nx = clamp(player.x+dx,0,cols-1);
+  const ny = clamp(player.y+dy,0,rows-1);
+  if(!canMove(nx,ny)) return;
+  const oldIndex = player.y*cols+player.x;
+  const newIndex = ny*cols+nx;
+  board.children[oldIndex].classList.remove('player');
+  board.children[newIndex].classList.add('player');
+  player.x=nx; player.y=ny;
+
+  const tile = currentMap[ny][nx];
+  if(tile===TILE_GOAL){
+    askQuestion();
+  }
+}
+function touchTile(x,y){
+  const t = currentMap[y][x];
+  if(t===TILE_HINT){
+    showHint();
+  }
+  if(Math.abs(x-player.x)+Math.abs(y-player.y)===1){
+    move(x-player.x, y-player.y);
+  }
+}
+
+document.addEventListener('keydown',e=>{
+  const k = e.key.toLowerCase();
+  if(["arrowup","w"].includes(k)) move(0,-1);
+  else if(["arrowdown","s"].includes(k)) move(0,1);
+  else if(["arrowleft","a"].includes(k)) move(-1,0);
+  else if(["arrowright","d"].includes(k)) move(1,0);
+});
+
+document.getElementById('btnUp').onclick=()=>move(0,-1);
+document.getElementById('btnDown').onclick=()=>move(0,1);
+document.getElementById('btnLeft').onclick=()=>move(-1,0);
+document.getElementById('btnRight').onclick=()=>move(1,0);
+
+/* ======= Preguntas / pistas ======= */
+function askQuestion(){
+  const L = LEVELS[levelIndex];
+  qText.innerHTML = <p>${L.q.text}</p>;
+  qHint.textContent = "";
+  qOpts.innerHTML = "";
+  L.q.opts.forEach((op,i)=>{
+    const b = document.createElement('button');
+    b.className='opt';
+    b.textContent = op;
+    b.onclick = ()=>{
+      if(i===L.q.ok){
+        b.classList.add('ok');
+        score += 100;
+        hud.score.textContent = score;
+        setTimeout(nextLevel, 500);
+        quiz.close();
+      }else{
+        b.classList.add('bad');
+        timeLeft = Math.max(0, timeLeft - L.penalty);
+        hud.time.textContent = fmt(timeLeft);
+      }
+    };
+    qOpts.appendChild(b);
   });
-  room.hints.forEach(([x,y])=>{ctx.fillStyle='#2dd4bf';ctx.fillRect(x*TILE+10,y*TILE+10,TILE-20,TILE-20);});
-  ctx.fillStyle='#b45309'; const [nx,ny]=room.npc; ctx.fillRect(nx*TILE+8,ny*TILE+6,16,14); ctx.fillStyle='#fde68a'; ctx.fillRect(nx*TILE+11,ny*TILE+2,10,6);
-  ctx.strokeStyle=locksOpened>=locksTotal?'#06b6d4':'#334155'; const [ex,ey]=room.exit; ctx.lineWidth=3; ctx.strokeRect(ex*TILE+4,ey*TILE+4,TILE-8,TILE-8);
-  // player
-  ctx.fillStyle='#e11d48'; ctx.fillRect(player.x-9,player.y-12,18,14); ctx.fillStyle='#fde68a'; ctx.fillRect(player.x-6,player.y-18,12,8); ctx.fillStyle='#9ca3af'; ctx.fillRect(player.x-8,player.y+2,16,6);
+  quiz.showModal();
 }
-
-/* ===== Input & movimiento ===== */
-onkeydown=e=>{keys[e.key.toLowerCase()]=true; if(e.key.toLowerCase()==='e') interact();};
-onkeyup=e=>{keys[e.key.toLowerCase()]=false;};
-function move(){
-  let vx=(keys['arrowright']||keys['d']?1:0)-(keys['arrowleft']||keys['a']?1:0);
-  let vy=(keys['arrowdown']||keys['s']?1:0)-(keys['arrowup']||keys['w']?1:0);
-  const L=Math.hypot(vx,vy)||1; player.x+=player.s*vx/L; player.y+=player.s*vy/L;
-  player.x=Math.max(32,Math.min(cv.width-32,player.x)); player.y=Math.max(32,Math.min(cv.height-32,player.y));
+function showHint(){
+  const L = LEVELS[levelIndex];
+  qText.innerHTML = <p>${L.q.text}</p>;
+  qHint.textContent = "Pista: " + L.q.hint;
+  qOpts.innerHTML = "";
+  const b = document.createElement('button');
+  b.textContent = "Cerrar";
+  b.onclick = ()=>quiz.close();
+  qOpts.appendChild(b);
+  quiz.showModal();
 }
-function nearby(){
-  const px=Math.floor(player.x/TILE), py=Math.floor(player.y/TILE);
-  const around=[[0,0],[1,0],[-1,0],[0,1],[0,-1]];
-  for(const [dx,dy] of around){
-    const x=px+dx,y=py+dy,t=room.g[y]?.[x];
-    if(t===T.LOCK) return {kind:'lock',x,y};
-    if(t===T.HINT) return {kind:'hint',x,y};
-    if(t===T.NPC) return {kind:'npc',x,y};
-    if(t===T.EXIT && locksOpened>=locksTotal) return {kind:'exit',x,y};
-  }
-  return null;
-}
-function loop(){ move(); ctx.clearRect(0,0,cv.width,cv.height); draw(); requestAnimationFrame(loop); }
-
-/* ===== Interacción ===== */
-const qM=el('qModal'), qT=el('qTitle'), qI=el('qInput'), qF=el('qFeedback');
-el('qCancel').onclick=()=> qM.style.display='none';
-el('qOk').onclick=validate;
-
-function interact(){
-  const n=nearby(); if(!n) return;
-  if(n.kind==='hint'){ showHints(); }
-  if(n.kind==='npc'){ toast("NPC: recuerda children’s / teachers’ / James’s"); }
-  if(n.kind==='lock'){
-    const k=${n.x},${n.y}, L=lockMap[k]; if(!L || L.open) {toast('Candado ya abierto');return;}
-    const item=DATA[level][L.idx]; qT.textContent=Convierte: “${item.q}”; qI.value=''; qI.dataset.lock=k; qF.textContent=''; qM.style.display='flex'; setTimeout(()=>qI.focus(),60);
-  }
-  if(n.kind==='exit'){ nextLevel(); }
-}
-
-function norm(s){return (s||'').toLowerCase().replaceAll('’',"'").replace(/\s+/g,' ').trim();}
-function accepts(list){
-  const set=new Set();
-  list.forEach(a=>{const b=norm(a); set.add(b); if(b.startsWith('the ')) set.add(b.slice(4)); else set.add('the '+b);});
-  return set;
-}
-function validate(){
-  const k=qI.dataset.lock; if(!k) return;
-  const L=lockMap[k]; const item=DATA[level][L.idx];
-  const okNow = accepts(item.a).has(norm(qI.value));
-  if(!answers[level]) answers[level]=[];
-  const prev=answers[level][L.idx]; let prior=null; if(prev) prior=prev.ok;
-  answers[level][L.idx]={q:item.q, user:qI.value.trim(), ok:okNow};
-
-  if(prior===null || prior===undefined){
-    if(okNow){stats.ok++; stats.pts+=PTS_OK;} else {stats.bad++; stats.pts+=PTS_BAD;}
-  }else{
-    if(prior===false && okNow){stats.ok++; stats.bad--; stats.pts-=PTS_BAD; stats.pts+=PTS_OK;}
-    if(prior===true  && !okNow){stats.ok--; stats.bad++; stats.pts-=PTS_OK; stats.pts+=PTS_BAD;}
-  }
-  if(okNow){ lockMap[k].open=true; locksOpened++; qM.style.display='none'; toast('✅ Correcto (+10)'); }
-  else { qF.textContent='✗ Incorrecto (−1). Pista: '+item.hint; }
-
-  hud();
-}
-
-/* ===== Pistas, niveles y fin ===== */
-const hM=el('hModal'), hBody=el('hBody'), hLvl=el('hLvl');
-function showHints(){ hLvl.textContent=level; hBody.innerHTML = DATA[level].map((x,i)=><p><b>P${i+1}:</b> ${x.hint}</p>).join(''); hM.style.display='flex'; }
-el('hClose').onclick=()=> hM.style.display='none';
-el('hint').onclick=()=> showHints();
 
 function nextLevel(){
-  if(level<3){ level++; setupLevel(); toast('Nivel '+level); }
-  else { finish(); }
-  hud();
+  levelIndex++;
+  if(levelIndex>=LEVELS.length){
+    finishedAt = Date.now();
+    renderEnd(); return;
+  }
+  loadLevel(levelIndex);
 }
-el('next').onclick=nextLevel;
 
-function finish(){
-  const total = Object.values(DATA).reduce((s,arr)=>s+arr.length,0);
-  const res = {alumno:{nombre:stats.name,correo:stats.mail,grupo:stats.group}, modo:stats.mode, score:stats.pts, ok:stats.ok, bad:stats.bad, nivelFinal:level, totalPreguntas:total, detalle:answers, ts:new Date().toISOString()};
-  el('fBody').innerHTML = <p><b>Alumno:</b> ${stats.name||'—'}</p><p><b>Modo:</b> ${stats.mode}</p><p><b>Puntaje:</b> ${stats.pts} (✔ ${stats.ok} · ✗ ${stats.bad})</p><p><b>Nivel alcanzado:</b> ${level}/3</p>;
-  el('fModal').style.display='flex';
-  if(GAS_ENDPOINT) fetch(GAS_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'submit',resumen:res})}).catch(()=>{});
-}
-el('finish').onclick=finish; el('fClose').onclick=()=> el('fModal').style.display='none';
-el('restart').onclick=()=>{ level=1; stats.ok=stats.bad=stats.pts=0; answers={}; setupLevel(); hud(); toast('Reiniciado'); };
-
-/* ===== D-pad móvil ===== */
-(function(){
-  const hasTouch='ontouchstart'in window||navigator.maxTouchPoints>0;
-  const mob=el('mob'); if(!hasTouch) return; mob.style.display='flex';
-  const bind=(id,down,up)=>{const b=el(id); b.addEventListener('touchstart',e=>{e.preventDefault();keys[down]=true;}); b.addEventListener('touchend',e=>{e.preventDefault();keys[down]=false;});};
-  bind('left','arrowleft'); bind('right','arrowright'); bind('up','arrowup'); bind('down','arrowdown');
-  el('act').addEventListener('touchstart',e=>{e.preventDefault();interact();});
-})();
-
-/* ===== Start ===== */
-setupLevel(); hud(); (function raf(){move(); ctx.clearRect(0,0,cv.width,cv.height); draw(); requestAnimationFrame(raf);})();
+/* ======= Boot ======= */
+renderStart();
 </script>
-</body></html>
+</body>
+</html>
